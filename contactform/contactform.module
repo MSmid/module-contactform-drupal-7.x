@@ -114,9 +114,13 @@ function contactform_form_validate($form, &$form_state) {
 /**
  * Implements hook_submit function
  */
-function contactform_form_submit($form, &$form_state) {   
-    contactform_unmanaged_file_write($form_state); 
-    drupal_set_message(t('Succes! Your question was sent!'));
+function contactform_form_submit($form, &$form_state) {     
+    if (contactform_unmanaged_file_write($form_state)) {
+        drupal_set_message(t('Succes! Your question was sent!'));
+    } else {
+        $form_state['rebuild'] = TRUE;
+        form_set_error('', t('Failed to write into file.'));
+    }   
 }
 
 /**
@@ -131,6 +135,12 @@ function contactform_unmanaged_file_write($form_state) {
           . "\n";
     
     $handle = fopen('public://contactform_submissions.csv', "a");
-    fwrite($handle, $line);
-    fclose($handle);
+    if (!fwrite($handle, $line)) {
+        fclose($handle);
+        return FALSE;
+    } else {
+        fclose($handle);
+        return TRUE;
+    }
+   
 }
