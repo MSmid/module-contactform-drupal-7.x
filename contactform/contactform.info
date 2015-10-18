@@ -1,0 +1,4 @@
+name = Contact Form
+description = Simple contact form module created for learning purpose
+core = 7.x
+php = 5.3

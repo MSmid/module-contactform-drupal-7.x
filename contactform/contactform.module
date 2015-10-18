@@ -1,0 +1,136 @@
+<?php
+/**
+ * @file
+ * A module implementing simple contact form. It lacks any kind of captcha
+ * validation or configuration. 
+ * 
+ * Module is available in two ways. First is block and second is a path 
+ * example/contactform, which point to the form.
+ * 
+ * @author Martin Šmíd
+ */
+
+/**
+ * Implements hook_help().
+ */
+function contactform_help($path, $arg) {
+    switch($path) {
+        case 'admin/help#contactform':
+            return '<h2>' . t('Simple contact form') . '</h2>'
+                . '<p>' . t('A module implementing simple contact form. '
+                . 'It lacks any kind of captcha validation or configuration.') . '</p>'
+                . '<p>' . t('Module is available in two ways. First is block and '
+                . 'second is a path example/contactform, which points to the form.') . '</p>';
+    }
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function contactform_block_info() {
+    $block['contactform'] = array(
+        'info' => t('Contact Form'),
+        'cache' => DRUPAL_CACHE_PER_ROLE
+        );
+    
+    return $block;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function contactform_block_view($delta = '') {
+    switch($delta) {
+        case 'contactform':
+            $block['subject'] = t('Contact Form');
+            if (user_access('access content')) {
+                $form = drupal_get_form('contactform_form');
+                $block['content'] = $form;
+            }
+            
+            return $block;           
+    }
+}
+
+/**
+ * Implements hook_menu function. Contact form is available on url:
+ * example/contactform
+ */
+function contactform_menu() {
+    $items = array();
+
+    $items['example/contactform'] = array(
+    'title' => 'Contact Form',
+    'description' => 'A simple contact form for learning purposes.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('contactform_form'),
+    'access callback' => TRUE
+    );
+
+    return $items;
+}
+
+/**
+ * Form structure
+ */
+function contactform_form($form, &$form_state) {       
+    $form['contactform_name'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Your name'),
+        '#size' => 50,
+        '#maxlength' => 64,
+        '#required' => TRUE
+    );
+    $form['contactform_email'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Your email'),
+        '#size' => 50,
+        '#maxlength' => 64,
+        '#required' => TRUE
+    );
+    $form['contactform_message'] = array(
+        '#type' => 'textarea',
+        '#title' => t('Your message'),
+        '#rows' => 5,
+        '#required' => TRUE
+    );
+    $form['contactform_submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Send')
+    );
+    
+    return $form;  
+}
+
+/**
+ * Implements hook_validation function
+ */
+function contactform_form_validate($form, &$form_state) {
+    if (!filter_var($form_state['values']['contactform_email'], FILTER_VALIDATE_EMAIL)) {
+        form_set_error('', t('Please, enter correct email address'));
+    }
+}
+
+/**
+ * Implements hook_submit function
+ */
+function contactform_form_submit($form, &$form_state) {   
+    contactform_unmanaged_file_write($form_state); 
+    drupal_set_message(t('Succes! Your question was sent!'));
+}
+
+/**
+ * Attempts to write into file, if file doesnt exist, it creates one. String
+ * is appended to the end.
+ */
+function contactform_unmanaged_file_write($form_state) {
+    //CSV format
+    $line = "{$form_state['values']['contactform_name']}, "
+          . "{$form_state['values']['contactform_email']}, "
+          . "{$form_state['values']['contactform_message']}"
+          . "\n";
+    
+    $handle = fopen('public://contactform_submissions.csv', "a");
+    fwrite($handle, $line);
+    fclose($handle);
+}
